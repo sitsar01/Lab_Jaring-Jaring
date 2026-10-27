@@ -1,0 +1,916 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light dark">
+<link rel="icon" href="data:,">
+<title>Lab Maya Eksperimen Jaring-Jaring</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/0.158.0/three.min.js"></script>
+<style>
+:root{
+  --bg:#eef1f7; --card:#ffffff; --card2:#f6f7fb; --ink:#1c2a4d; --muted:#6b7794; --line:#e3e7f0;
+  --navy:#1e2f5a; --indigo:#4f46e5; --indigo-soft:#e6e6ff; --cyan:#2fd8dc; --cyan-dark:#0fbabd;
+  --green:#16a34a; --green-soft:#dcfce7; --amber:#d97706; --amber-soft:#fef3c7; --red:#dc2626; --red-soft:#fee2e2;
+  --radius:18px; --shadow:0 2px 14px rgba(30,47,90,.06);
+}
+@media (prefers-color-scheme:dark){
+  :root{ --bg:#0f1526; --card:#1a2238; --card2:#141c30; --ink:#e7ecf7; --muted:#9aa7c2; --line:#2a3654; --navy:#dbe4ff; --indigo-soft:#2c2a5e; --shadow:0 2px 14px rgba(0,0,0,.35); }
+}
+*{box-sizing:border-box} html,body{margin:0}
+body{font-family:"Plus Jakarta Sans",system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased}
+button{font:inherit;cursor:pointer} input[type=range]{width:100%;accent-color:var(--indigo)}
+.wrap{max-width:1220px;margin:0 auto;padding:14px 14px 40px}
+/* CARDS */
+.card{background:var(--card);border-radius:var(--radius);box-shadow:var(--shadow);padding:22px}
+h1{font-size:22px;margin:0 0 6px;letter-spacing:-.02em} .sub{color:var(--muted);font-size:14.5px;margin:0}
+.tabs{display:flex;flex-wrap:wrap;gap:9px;margin-top:16px}
+.tab{border:1.5px solid var(--line);background:var(--card);color:var(--ink);padding:9px 16px;border-radius:999px;font-weight:700;font-size:13.5px}
+.tab.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media(prefers-color-scheme:dark){.tab.on{background:var(--indigo);border-color:var(--indigo)}}
+.tab .done-dot{color:#4ade80}
+/* LAYOUT STAGE 2 */
+.grid2{display:grid;grid-template-columns:1.65fr 1fr;gap:14px;margin-top:14px;align-items:start}
+.canvas-card{position:relative;background:linear-gradient(180deg,#eef3ff,#e8eefb);border-radius:var(--radius);overflow:hidden;min-height:520px;box-shadow:var(--shadow)}
+@media(prefers-color-scheme:dark){.canvas-card{background:linear-gradient(180deg,#182238,#131b30)}}
+.canvas-card .badge{position:absolute;top:14px;left:14px;z-index:3;background:var(--navy);color:#fff;font-size:12px;font-weight:700;padding:7px 13px;border-radius:999px}
+.canvas-card .hint{position:absolute;right:12px;bottom:12px;z-index:3;background:rgba(255,255,255,.88);color:#5b6a8a;font-size:11.5px;padding:6px 11px;border-radius:999px}
+#scene{position:absolute;inset:0} #scene canvas{display:block;width:100%;height:100%;touch-action:none}
+.side{display:flex;flex-direction:column;gap:14px}
+.side h2{font-size:16.5px;margin:0 0 12px;line-height:1.35}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{border:1.5px solid var(--line);background:var(--card);color:var(--ink);padding:8px 15px;border-radius:999px;font-weight:700;font-size:13.5px}
+.chip.on{background:var(--navy);color:#fff;border-color:var(--navy)}
+@media(prefers-color-scheme:dark){.chip.on{background:var(--indigo);border-color:var(--indigo)}}
+.label{font-size:14px;margin:18px 0 8px}
+.kv{display:flex;justify-content:space-between;font-size:14px;padding:7px 0;border-top:1px dashed var(--line)}
+.kv b{font-weight:800}
+.btn{display:inline-flex;align-items:center;gap:8px;border:0;border-radius:12px;padding:12px 18px;font-weight:800;font-size:14px;background:var(--card2);color:var(--ink)}
+.btn.primary{background:var(--indigo);color:#fff;opacity:.55} .btn.primary.ready{opacity:1}
+.btn.navy{background:var(--navy);color:#fff} .btn.ghost{background:var(--card2)}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+.note{border:1.5px dashed var(--line);border-radius:12px;padding:13px 14px;font-size:13px;color:var(--muted);line-height:1.55;margin-top:12px;background:var(--card2)}
+.ok{color:var(--green);font-weight:800} .bad{color:var(--red);font-weight:700}
+/* View B inside left card */
+.viewB{position:absolute;inset:0;padding:52px 16px 44px;overflow:auto;display:none}
+.viewB.show{display:block}
+.netgrid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.netcell{background:#fff;border:2px solid #dde4f2;border-radius:14px;padding:10px 6px 6px;text-align:center;cursor:pointer;transition:.15s}
+@media(prefers-color-scheme:dark){.netcell{background:#1e2947}}
+.netcell:hover{transform:translateY(-2px);border-color:var(--indigo)}
+.netcell.found{border-color:var(--green);background:var(--green-soft)}
+.netcell.wrong{border-color:var(--red);background:var(--red-soft)}
+.netcell small{display:block;font-size:11px;color:#71809e;font-weight:700;margin-top:4px}
+.opts{display:grid;gap:9px;margin-top:10px}
+.opt{ text-align:left;border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:12px;padding:12px 14px;font-weight:600;font-size:14px}
+.opt.sel{border-color:var(--indigo);background:var(--indigo-soft)}
+.opt.right{border-color:var(--green);background:var(--green-soft)} .opt.wrong{border-color:var(--red);background:var(--red-soft)}
+.feedback{border-radius:12px;padding:12px 14px;font-size:13.5px;line-height:1.55;margin-top:12px;display:none}
+.feedback.show{display:block} .feedback.good{background:var(--green-soft);color:#14532d} .feedback.no{background:var(--red-soft);color:#7f1d1d}
+@media(prefers-color-scheme:dark){.feedback.good{color:#bbf7d0}.feedback.no{color:#fecaca}}
+/* Other stages */
+.stage{display:none}.stage.show{display:block}
+.qcard{border:1.5px solid var(--line);border-radius:16px;padding:18px;margin-top:14px;background:var(--card)}
+.qcard h3{margin:0 0 6px;font-size:16px}.qcard p{color:var(--muted);font-size:14px;line-height:1.6;margin:0 0 12px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.progressline{height:9px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:10px}.progressline i{display:block;height:100%;background:var(--indigo);width:0;transition:.4s}
+.pembahasan{display:none;margin-top:12px;border-top:1px dashed var(--line);padding-top:12px;font-size:14px;line-height:1.7}
+.pembahasan.show{display:block}.pembahasan b.lab{color:var(--indigo)}
+textarea{width:100%;border:1.5px solid var(--line);border-radius:12px;padding:12px;font:inherit;background:var(--card);color:var(--ink);min-height:84px;resize:vertical}
+.mood{display:flex;gap:8px;flex-wrap:wrap}.mood button{border:1.5px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:9px 14px;font-weight:700}.mood button.sel{border-color:var(--indigo);background:var(--indigo-soft)}
+/* MISI B — BUILDER (sesuai foto referensi) */
+.grid2.bmode{grid-template-columns:1fr}
+.grid2.bmode .canvas-card{background:var(--card);min-height:560px}
+.grid2.bmode .viewB{position:relative;inset:auto;padding:26px 30px 30px}
+.bhead{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.bhead h2{font-size:17.5px;margin:0;color:var(--navy);letter-spacing:-.01em}
+.bpill{background:#1e2f5a;color:#fff;font-weight:800;border-radius:999px;padding:7px 15px;font-size:14px;white-space:nowrap}
+@media(prefers-color-scheme:dark){.bpill{background:var(--indigo)}}
+.binstr{font-size:14.5px;line-height:1.6;margin:14px 0 2px;max-width:660px;color:var(--ink)}
+.bgrid{display:grid;grid-template-columns:repeat(4,1fr);gap:9px;width:min(308px,80vw);margin:20px auto 8px}
+.bcell{position:relative;aspect-ratio:1;border:2px solid #ccd5f3;border-radius:14px;background:#fff;cursor:pointer;padding:0;transition:.12s}
+@media(prefers-color-scheme:dark){.bcell{background:var(--card2);border-color:#33406b}}
+.bcell::after{content:'';position:absolute;inset:0;margin:auto;width:5px;height:5px;border-radius:50%;background:#ccd5f3}
+@media(prefers-color-scheme:dark){.bcell::after{background:#33406b}}
+.bcell:hover{border-color:var(--indigo)}
+.bcell.sel{background:var(--cyan);border-color:#0e7f8c}
+.bcell.sel::after{background:rgba(255,255,255,.9)}
+.bselinfo{text-align:center;font-size:12.5px;color:var(--muted);margin:2px 0 0}
+.bfound{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.bfound:empty{display:none}
+.bfound .fitem{background:var(--card2);border:1.5px solid var(--line);border-radius:12px;padding:7px 9px 4px;text-align:center}
+.bfound .fitem small{display:block;font-size:10.5px;color:var(--muted);font-weight:700;margin-top:2px}
+/* MISI B — TAMPILAN 3D SAAT CEK JARING */
+.bfold{margin-top:16px;border:1.5px solid var(--line);border-radius:16px;overflow:hidden;background:linear-gradient(180deg,#eef3ff,#e8eefb)}
+@media(prefers-color-scheme:dark){.bfold{background:linear-gradient(180deg,#182238,#131b30)}}
+.bfold-head{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;padding:12px 14px 0}
+.bfold-head b{font-size:14.5px;color:var(--navy)}
+.bfold-status{font-size:12px;font-weight:800;padding:6px 11px;border-radius:999px;background:var(--card);color:var(--muted);border:1.5px solid var(--line)}
+.bfold-status.ok{background:var(--green-soft);color:#14532d;border-color:transparent}
+.bfold-status.bad{background:var(--red-soft);color:#7f1d1d;border-color:transparent}
+@media(prefers-color-scheme:dark){.bfold-status.ok{color:#bbf7d0}.bfold-status.bad{color:#fecaca}}
+#bFoldCanvas{display:block;width:100%;height:320px;touch-action:none;cursor:grab}
+.bfold-ctrl{display:flex;align-items:center;gap:12px;padding:4px 14px 14px;flex-wrap:wrap}
+.bfold-ctrl input[type=range]{flex:1;min-width:140px}
+.bfold-pct{font-weight:800;font-size:13.5px;white-space:nowrap}
+.bfold-hint{font-size:11.5px;color:var(--muted);padding:0 14px 12px;margin-top:-6px}
+.bfold-legend{margin:0 14px 12px;padding:10px 12px;border-radius:12px;background:var(--red-soft);color:#7f1d1d;font-size:12.5px;line-height:1.55;font-weight:600}
+@media(prefers-color-scheme:dark){.bfold-legend{color:#fecaca}}
+.bfold-legend .sw{display:inline-block;width:13px;height:13px;border-radius:4px;vertical-align:-2px;margin:0 2px;border:1.5px solid rgba(0,0,0,.18)}
+.bfold-legend .sw.r{background:#ef4444}.bfold-legend .sw.o{background:#f97316}
+.hidden{display:none!important}
+footer{color:var(--muted);font-size:12.5px;text-align:center;margin-top:22px;line-height:1.6}
+@media(max-width:860px){ .grid2{grid-template-columns:1fr}.canvas-card{min-height:430px} .netgrid{grid-template-columns:repeat(2,1fr)} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <!-- TAHAP 1 -->
+  <section class="stage" id="stage1">
+    <div class="card">
+      <h1>Prediksi Dulu, Yuk!</h1>
+      <p class="sub">Sebelum bereksperimen, tebak dulu jawabanmu. Tidak apa-apa kalau belum yakin — nanti kita buktikan di Tahap 2.</p>
+      <div class="qcard"><h3>1. Rangkaian 6 persegi selalu bisa dilipat menjadi kubus?</h3><p>Bayangkan selembar kertas berisi 6 persegi yang tersambung. Apakah susunannya selalu membentuk kubus?</p>
+        <div class="row"><button class="opt pred" data-q="0" data-v="ya" style="flex:1">Ya, selalu bisa</button><button class="opt pred" data-q="0" data-v="tidak" style="flex:1">Tidak — tergantung susunannya</button></div></div>
+      <div class="qcard"><h3>2. Ada berapa banyak jaring-jaring kubus yang berbeda?</h3><p>Tebak jumlahnya. Jawabannya akan kamu temukan sendiri di Misi B.</p>
+        <div class="row"><button class="opt pred" data-q="1" data-v="6">6 jaring</button><button class="opt pred" data-q="1" data-v="11">11 jaring</button><button class="opt pred" data-q="1" data-v="20">20 jaring</button></div></div>
+      <div class="qcard"><h3>3. Bangun apa yang jaring-jaringnya memiliki 2 segitiga dan 3 persegi panjang?</h3>
+        <div class="row"><button class="opt pred" data-q="2" data-v="limas">Limas segiempat</button><button class="opt pred" data-q="2" data-v="prisma">Prisma segitiga</button><button class="opt pred" data-q="2" data-v="balok">Balok</button></div></div>
+      <div class="feedback" id="predFb"></div>
+      <div class="row" style="margin-top:16px"><button class="btn navy" id="btnPredDone">Simpan Prediksi &amp; ke Eksperimen →</button><span style="font-size:13px;color:var(--muted)" id="predCount">0 dari 3 prediksi terisi</span></div>
+    </div>
+  </section>
+
+  <!-- TAHAP 2 -->
+  <section class="stage show" id="stage2">
+    <div class="card">
+      <h1>Eksperimen Jaring-Jaring</h1>
+      <p class="sub">Dua misi menantimu. Seret kanvas 3D untuk memutar sudut pandang.</p>
+      <div class="tabs">
+        <button class="tab on" data-mission="A">A · Lipat &amp; buka 3D <span class="done-dot hidden" id="dotA">●</span></button>
+        <button class="tab" data-mission="B">B · Misi 11 jaring kubus <span class="done-dot hidden" id="dotB">●</span></button>
+      </div>
+    </div>
+
+    <div class="grid2" id="grid2">
+      <div class="canvas-card">
+        <span class="badge" id="leftBadge">Lipat &amp; buka 3D</span>
+        <div id="scene" aria-label="Kanvas 3D jaring-jaring"></div>
+        <!-- MISI B BOARD -->
+        <div class="viewB" id="viewB">
+          <div class="bhead"><h2>B · Misi: temukan 11 jaring kubus!</h2><span class="bpill" id="bPill">0 / 11</span></div>
+          <p class="binstr">Klik petak untuk merangkai 6 persegi, lalu tekan <b>Cek jaring</b>. Temukan minimal <b>5</b> untuk membuka tahap berikutnya — misi penuhnya 11!</p>
+          <div class="bgrid" id="bGrid" role="group" aria-label="Papan petak untuk merangkai jaring kubus"></div>
+          <p class="bselinfo" id="bSelInfo">Terpilih 0 dari 6 persegi — klik petak untuk memilih, klik lagi untuk melepas.</p>
+          <div class="feedback" id="bFb"></div>
+          <div class="bfold hidden" id="bFoldPanel">
+            <div class="bfold-head"><b>👀 Tampilan 3D — jaringmu sedang dilipat</b><span class="bfold-status" id="bFoldStatus">Melipat…</span></div>
+            <canvas id="bFoldCanvas" aria-label="Tampilan 3D jaring kubus yang sedang dilipat"></canvas>
+            <div class="bfold-ctrl">
+              <button class="btn" id="btnFoldReplay" type="button">▶ Putar ulang lipatan</button>
+              <input type="range" id="bFoldRange" min="0" max="100" value="0" aria-label="Geser untuk melipat atau membuka jaring pada tampilan 3D">
+              <span class="bfold-pct" id="bFoldPct">Terlipat 0%</span>
+            </div>
+            <p class="bfold-hint">Seret tampilan 3D untuk memutar sudut pandang · cubit/scroll untuk zoom. Geser penggeser untuk melipat / membuka dengan kecepatanmu sendiri.</p>
+            <p class="bfold-legend hidden" id="bFoldLegend"><span class="sw r"></span><span class="sw o"></span> <b>Sisi berwarna merah &amp; oranye adalah sisi yang tumpang tindih.</b> Ikuti warnanya sejak awal lipatan — di akhir, kedua sisi itu menempati tempat yang sama, jadi ditampilkan agak tembus pandang dan dipisah sedikit berlapis supaya keduanya tetap terlihat, bukan tertutup satu sama lain.</p>
+          </div>
+          <div class="row" style="margin-top:16px">
+            <button class="btn primary ready" id="btnCheckNet">Cek jaring</button>
+            <button class="btn ghost" id="btnClearNet">Hapus</button>
+          </div>
+          <div class="bfound" id="bFoundGallery" aria-label="Jaring kubus yang sudah ditemukan"></div>
+        </div>
+        <span class="hint" id="leftHint">seret untuk memutar · cubit/scroll untuk zoom</span>
+      </div>
+
+      <div class="side">
+        <!-- PANEL A -->
+        <div class="card" id="panelA">
+          <h2>A · Lihat jaring melipat menjadi bangun ruang</h2>
+          <div class="chips" id="shapeChips">
+            <button class="chip on" data-shape="kubus">Kubus</button>
+            <button class="chip" data-shape="balok">Balok</button>
+            <button class="chip" data-shape="prisma">Prisma segitiga</button>
+            <button class="chip" data-shape="limas">Limas segiempat</button>
+          </div>
+          <p class="label">Geser untuk melipat / membuka:</p>
+          <input type="range" id="foldRange" min="0" max="100" value="0" aria-label="Geser untuk melipat atau membuka">
+          <div class="kv"><span>Terlipat</span><b id="foldPct">0%</b></div>
+          <div class="kv"><span>Bangun</span><b id="shapeName">kubus (s = 3)</b></div>
+          <div class="kv"><span>Sisi pada jaring</span><b id="faceCount">6 persegi</b></div>
+          <div class="row" style="margin-top:14px">
+            <button class="btn" id="btnPlay">▶ Putar animasi lipat</button>
+            <button class="btn" id="btnPaham">Saya paham, lanjut →</button>
+          </div>
+          <div class="feedback" id="aFb"></div>
+        </div>
+        <!-- GATE CARD -->
+        <div class="card">
+          <button class="btn primary" id="btnToStage3" disabled>Lanjut ke Simpulan →</button>
+          <div class="note" id="gateNote">Selesaikan kedua misi (A: tekan “Saya paham”, B: temukan ≥5 jaring (kamu: <span id="gateB">0</span>)) untuk membuka Tahap 3.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAHAP 3 -->
+  <section class="stage" id="stage3">
+    <div class="card">
+      <h1>Simpulkan Temuanmu</h1>
+      <p class="sub">Pilih pernyataan yang benar berdasarkan eksperimenmu, lalu baca simpulan lengkapnya.</p>
+      <div class="qcard"><h3>Pilih semua pernyataan yang benar:</h3>
+        <div class="opts">
+          <button class="opt concl" data-right="1">Kubus mempunyai 11 jaring-jaring yang berbeda.</button>
+          <button class="opt concl" data-right="0">Semua rangkaian 6 persegi pasti menjadi kubus.</button>
+          <button class="opt concl" data-right="1">Dua sisi yang berhadapan pada kubus tidak bersebelahan pada jaring-jaringnya.</button>
+          <button class="opt concl" data-right="1">Jaring-jaring prisma segitiga terdiri atas 2 segitiga dan 3 persegi panjang.</button>
+          <button class="opt concl" data-right="0">Limas segiempat mempunyai 4 sisi segitiga dan 1 alas segitiga.</button>
+        </div>
+        <div class="feedback" id="conclFb"></div>
+        <div class="row" style="margin-top:14px"><button class="btn navy" id="btnCheckConcl">Periksa Simpulan</button><button class="btn primary hidden" id="btnToStage4" style="opacity:1">Lanjut ke Latihan →</button></div>
+      </div>
+      <div class="qcard"><h3>Simpulan penting</h3>
+        <p><b>Jaring-jaring</b> adalah rangkaian sisi bangun ruang yang apabila dilipat menurut rusuknya membentuk bangun ruang itu. Satu bangun ruang dapat mempunyai banyak jaring-jaring, tetapi tidak semua rangkaian sisi dapat dilipat menjadi bangun ruang — sisi yang tumpang tindih atau kurang satu sisi membuat lipatan gagal tertutup.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAHAP 4 -->
+  <section class="stage" id="stage4">
+    <div class="card">
+      <h1>Latihan</h1>
+      <p class="sub">Kerjakan 3 soal berikut. Klik “Lihat Pembahasan” setelah mencoba menjawab sendiri.</p>
+      <div id="latihanList"></div>
+      <div class="row" style="margin-top:18px"><button class="btn primary" id="btnToStage5" style="opacity:1">Lanjut ke Refleksi →</button><span style="font-size:13px;color:var(--muted)" id="latScore"></span></div>
+    </div>
+  </section>
+
+  <!-- TAHAP 5 -->
+  <section class="stage" id="stage5">
+    <div class="card">
+      <h1>Refleksi</h1>
+      <p class="sub">Luangkan sejenak untuk memikirkan kembali belajarmu hari ini.</p>
+      <div class="qcard"><h3>Bagaimana perasaanmu belajar jaring-jaring hari ini?</h3><div class="mood" id="moodRow">
+        <button data-m="Sangat senang">😄 Sangat senang</button><button data-m="Senang">🙂 Senang</button><button data-m="Biasa saja">😐 Biasa saja</button><button data-m="Masih bingung">🤔 Masih bingung</button></div></div>
+      <div class="qcard"><h3>Apa hal baru yang kamu pelajari?</h3><textarea id="refl1" placeholder="Contoh: Ternyata kubus punya 11 jaring-jaring, bukan cuma satu bentuk salib…"></textarea></div>
+      <div class="qcard"><h3>Bagian mana yang masih ingin kamu coba lagi?</h3><textarea id="refl2" placeholder="Tuliskan di sini…"></textarea></div>
+      <div class="row" style="margin-top:16px"><button class="btn navy" id="btnFinish">Selesai — Hebat! 🎉</button></div>
+      <div class="feedback" id="finishFb"></div>
+    </div>
+  </section>
+
+  <footer>Lab Maya Jaring-Jaring Bangun Ruang · Matematika — Kubus, Balok, Prisma Segitiga, dan Limas Segiempat</footer>
+</div>
+
+<script>
+(function(){
+"use strict";
+var $=function(s,c){return (c||document).querySelector(s)}; var $$=function(s,c){return Array.prototype.slice.call((c||document).querySelectorAll(s))};
+/* ---------- STATE ---------- */
+var state={aDone:false,bFound:0,unlocked:false,pred:{},latihanScore:0,latihanAnswered:{}};
+/* ---------- STAGE NAV ---------- */
+var unlocked34=false, unlocked5=false;
+function goStage(n){
+  if(n===3 && !state.unlocked) return;
+  if(n===4 && !unlocked34) return;
+  if(n===5 && !unlocked5 && !unlocked34) { /* allow from 4 */ if(!unlocked34) return; }
+  $$('.stage').forEach(function(el){el.classList.remove('show')});
+  $('#stage'+n).classList.add('show');
+  window.scrollTo({top:0,behavior:'smooth'});
+}
+/* ---------- PREDIKSI ---------- */
+$$('.pred').forEach(function(b){ b.addEventListener('click',function(){
+  var q=b.getAttribute('data-q'); state.pred[q]=b.getAttribute('data-v');
+  $$('.pred[data-q="'+q+'"]').forEach(function(x){x.classList.remove('sel')}); b.classList.add('sel');
+  $('#predCount').textContent=Object.keys(state.pred).length+' dari 3 prediksi terisi';
+});});
+$('#btnPredDone').addEventListener('click',function(){
+  var fb=$('#predFb'); fb.className='feedback show good';
+  var c1=state.pred['0']==='tidak', c2=state.pred['1']==='11', c3=state.pred['2']==='prisma';
+  fb.innerHTML='Prediksimu tersimpan! '+(Object.keys(state.pred).length<3?'Ada prediksi yang belum terisi — tidak apa-apa, tetap lanjut ya. ':'')+'Nanti di akhir eksperimen kamu bisa memeriksa: susunan 6 persegi <b>'+(c1?'✓ tepat':'bergantung susunannya')+'</b>, jumlah jaring kubus <b>11</b>, dan 2 segitiga + 3 persegi panjang adalah jaring <b>prisma segitiga</b>. Sekarang buktikan lewat eksperimen!';
+  setTimeout(function(){goStage(2)},900);
+});
+/* ---------- MISSION TABS ---------- */
+var curMission='A';
+function setMission(m){
+  curMission=m;
+  $$('.tab').forEach(function(t){t.classList.toggle('on',t.getAttribute('data-mission')===m)});
+  $('#panelA').classList.toggle('hidden',m!=='A');
+  $('#scene').style.display = m==='A' ? 'block':'none';
+  $('#viewB').classList.toggle('show',m==='B');
+  $('#grid2').classList.toggle('bmode',m==='B');
+  $('#leftBadge').style.display = m==='B' ? 'none':'';
+  $('#leftHint').style.display = m==='B' ? 'none':'';
+  $('#leftBadge').textContent = 'Lipat & buka 3D';
+  $('#leftHint').textContent = m==='A'?'seret untuk memutar · cubit/scroll untuk zoom':'klik rangkaian yang bisa menjadi kubus';
+  if(m==='A'){ setTimeout(onResize,30); }
+}
+$$('.tab').forEach(function(t){ t.addEventListener('click',function(){ setMission(t.getAttribute('data-mission')); }); });
+/* ---------- GATE ---------- */
+function updateGate(){
+  $('#gateB').textContent=state.bFound;
+  var ok = state.aDone && state.bFound>=5;
+  var btn=$('#btnToStage3'); btn.disabled=!ok; btn.classList.toggle('ready',ok);
+  if(ok && !state.unlocked){ state.unlocked=true; $('#gateNote').innerHTML='<span class="ok">✓ Kedua misi selesai!</span> Tahap 3 Simpulan sudah terbuka. Klik tombol di atas untuk melanjutkan.'; }
+  $('#dotA').classList.toggle('hidden',!state.aDone);
+  $('#dotB').classList.toggle('hidden',!(state.bFound>=5));
+}
+$('#btnToStage3').addEventListener('click',function(){ goStage(3); });
+/* ============================================================
+   THREE.JS FOLDING
+============================================================ */
+var renderer=null, scene=null, camera=null, currentGroup=null, currentPivots=[], currentShape='kubus', foldVal=0;
+var az=0.7, pol=0.95, dist=6.2, dragging=false, px=0, py=0;
+var shapeInfo={
+  kubus:{name:'kubus (s = 3)',faces:'6 persegi'},
+  balok:{name:'balok (4 × 3 × 2)',faces:'6 persegi panjang (3 pasang)'},
+  prisma:{name:'prisma segitiga',faces:'2 segitiga + 3 persegi panjang'},
+  limas:{name:'limas segiempat',faces:'1 persegi + 4 segitiga'}
+};
+function mat(color){ return new THREE.MeshStandardMaterial({color:color,side:THREE.DoubleSide,roughness:.55,metalness:.05}); }
+var COL=0x2fd8dc, COL2=0x25b8ce, COL3=0x3ae0c8;
+function plane(w,h,color){
+  var m=new THREE.Mesh(new THREE.PlaneGeometry(w,h),mat(color));
+  var e=new THREE.LineSegments(new THREE.EdgesGeometry(m.geometry),new THREE.LineBasicMaterial({color:0x0e7f8c}));
+  m.add(e); return m;
+}
+function tri(b,h,color){
+  var s=new THREE.Shape(); s.moveTo(-b/2,0); s.lineTo(b/2,0); s.lineTo(0,h); s.closePath();
+  var g=new THREE.ShapeGeometry(s); var m=new THREE.Mesh(g,mat(color));
+  var e=new THREE.LineSegments(new THREE.EdgesGeometry(g),new THREE.LineBasicMaterial({color:0x0e7f8c})); m.add(e); return m;
+}
+function pivot(x,y,z){ var g=new THREE.Group(); g.position.set(x,y,z); return g; }
+function clearShape(){ if(currentGroup){ scene.remove(currentGroup); } currentGroup=new THREE.Group(); currentPivots=[]; scene.add(currentGroup); }
+
+function buildKubus(){
+  clearShape(); var s=1.5;
+  var base=plane(s,s,COL); base.rotation.x=-Math.PI/2; currentGroup.add(base);
+  function side(px,pz,axis,sign){
+    var p=pivot(px,0,pz); var m=plane(s,s,COL2); m.rotation.x=-Math.PI/2;
+    var holder=new THREE.Group(); holder.position.set(axis==='z'?0:sign*s/2,0,axis==='z'?sign*s/2:0); holder.add(m);
+    // simpler: offset mesh along local direction
+    m.position.set(axis==='z'?0:sign*s/2,0,axis==='z'?sign*s/2:0);
+    p.add(m); currentGroup.add(p); currentPivots.push({g:p,axis:axis,sign:sign,type:'side'}); return p;
+  }
+  var front=side(0,s/2,'z',1), back=side(0,-s/2,'z',-1), right=side(s/2,0,'x',1), left=side(-s/2,0,'x',-1);
+  // top attached to back's far edge
+  var topP=pivot(0,0,-s); // positioned in back pivot local space below
+  back.add(topP); topP.position.set(0,0,-s);
+  var tm=plane(s,s,COL3); tm.rotation.x=-Math.PI/2; tm.position.set(0,0,-s/2); topP.add(tm);
+  currentPivots.push({g:topP,axis:'z',sign:-1,type:'top'});
+}
+function buildBalok(){
+  clearShape(); var L=2.1,W=1.4,H=1.1;
+  var base=plane(L,W,COL); base.rotation.x=-Math.PI/2; currentGroup.add(base);
+  function add(px,pz,axis,sign,w){
+    var p=pivot(px,0,pz); var m=plane(w,H,COL2); m.rotation.x=-Math.PI/2;
+    m.position.set(axis==='z'?0:sign*H/2,0,axis==='z'?sign*H/2:0); if(axis==='x'){ m.rotation.z=Math.PI/2; }
+    p.add(m); currentGroup.add(p); currentPivots.push({g:p,axis:axis,sign:sign,type:'side'}); return p;
+  }
+  var front=add(0,W/2,'z',1,L), back=add(0,-W/2,'z',-1,L), right=add(L/2,0,'x',1,W), left=add(-L/2,0,'x',-1,W);
+  var topP=pivot(0,0,0); back.add(topP); topP.position.set(0,0,-H);
+  var tm=plane(L,W,COL3); tm.rotation.x=-Math.PI/2; tm.position.set(0,0,-W/2); topP.add(tm);
+  currentPivots.push({g:topP,axis:'z',sign:-1,type:'top'});
+}
+function buildPrisma(){
+  clearShape(); var L=2.2,W=1.3,Ht=W*0.95;
+  var slant=Math.sqrt((W/2)*(W/2)+Ht*Ht); // panjang sisi miring segitiga (lebar sisi tegak yang benar)
+  var sideAng=Math.acos(-(W/2)/slant); // sudut lipat sisi tegak: tepi atas kedua sisi bertemu di rusuk puncak
+  var base=plane(L,W,COL); base.rotation.x=-Math.PI/2; currentGroup.add(base);
+  function rect(px,pz,sign){
+    var p=pivot(px,0,pz); var m=plane(L,slant,COL2); m.rotation.x=-Math.PI/2; m.position.set(0,0,sign*slant/2); p.add(m); currentGroup.add(p);
+    currentPivots.push({g:p,axis:'z',sign:sign,type:'side',angMax:sideAng}); return p;
+  }
+  rect(0,W/2,1); rect(0,-W/2,-1);
+  // triangles at both ends of base
+  [-1,1].forEach(function(sgn){
+    var p=pivot(sgn*L/2,0,0); var t=tri(W,Ht,COL3); // triangle in XZ-ish plane
+    t.rotation.x=-Math.PI/2; t.rotation.z=sgn>0?-Math.PI/2:Math.PI/2; t.position.set(sgn*0.01,0,0);
+    // place triangle extending outward along x: use group rotation trick
+    var holder=new THREE.Group(); holder.add(t); holder.position.set(0,0,0);
+    p.add(holder); currentGroup.add(p); currentPivots.push({g:p,axis:'x',sign:sgn,type:'tri',angMax:Math.PI/2});
+  });
+}
+function buildLimas(){
+  clearShape(); var s=1.6, th=1.55;
+  var apexAng=Math.acos(-(s/2)/th); // sudut lipat agar keempat puncak segitiga bertemu di satu titik di atas pusat alas
+  var base=plane(s,s,COL); base.rotation.x=-Math.PI/2; currentGroup.add(base);
+  function triSide(px,pz,axis,sign,rotZ){
+    var p=pivot(px,0,pz); var t=tri(s,th,COL2);
+    // lay flat: shape XY -> rotate x -90 makes it lie in XZ, apex pointing outward
+    t.rotation.x=-Math.PI/2; t.rotation.z=rotZ;
+    var holder=new THREE.Group(); holder.position.set(0,0,0); holder.add(t);
+    // offset so base of triangle sits at pivot edge: move holder outward half? shape base at y=0, so after rotation base at pivot, apex outward — good if positioned at edge
+    p.add(holder); currentGroup.add(p); currentPivots.push({g:p,axis:axis,sign:sign,type:'limas',angMax:apexAng});
+  }
+  triSide(0,s/2,'z',1,Math.PI);       // front: apex +z
+  triSide(0,-s/2,'z',-1,0);          // back: apex -z
+  triSide(s/2,0,'x',1,-Math.PI/2);   // right
+  triSide(-s/2,0,'x',-1,Math.PI/2);  // left
+}
+function applyFold(t){
+  foldVal=t;
+  if(useFallback){ fbT=t; fbDraw(); return; }
+  if(!currentGroup && !currentPivots.length) return;
+  currentPivots.forEach(function(pv){
+    var maxAng = (typeof pv.angMax==='number') ? pv.angMax : Math.PI/2;
+    var ang = t*maxAng;
+    if(pv.axis==='z'){ pv.g.rotation.x = pv.sign>0 ? -ang : ang; }
+    else if(pv.axis==='x'){ pv.g.rotation.z = pv.sign>0 ? ang : -ang; }
+  });
+  if(currentGroup) currentGroup.position.y = -0.2 + t*0.55;
+}
+/* ---------- FALLBACK 2D ISOMETRIC RENDERER (tanpa WebGL/CDN) ---------- */
+var useFallback=false, fbCanvas=null, fbCtx=null, fbT=0, fbShape='kubus', fbRot=0, fbScale=1;
+function flatPt(gx,gy){ return [gx-gy*0.55, gx*0.30+gy*0.60]; }
+function sqFlat(cx,cy,w,h){ w=w||1; h=h||1; return [flatPt(cx,cy),flatPt(cx+w,cy),flatPt(cx+w,cy+h),flatPt(cx,cy+h)]; }
+function triFlat(cx,cy,dir){ // triangle attached to cell (cx,cy), apex outward dir: 'u','d','l','r'
+  if(dir==='u') return [flatPt(cx,cy),flatPt(cx+1,cy),flatPt(cx+0.5,cy-1)];
+  if(dir==='d') return [flatPt(cx,cy+1),flatPt(cx+1,cy+1),flatPt(cx+0.5,cy+2)];
+  if(dir==='l') return [flatPt(cx,cy),flatPt(cx,cy+1),flatPt(cx-1,cy+0.5)];
+  return [flatPt(cx+1,cy),flatPt(cx+1,cy+1),flatPt(cx+2,cy+0.5)];
+}
+var ISO_TOP=[[0,-1],[1,-0.5],[0,0],[-1,-0.5]], ISO_L=[[-1,-0.5],[0,0],[0,1],[-1,0.5]], ISO_R=[[0,0],[1,-0.5],[1,0.5],[0,1]];
+function fbFaces(shape){
+  var C1='#2fd8dc',C2='#25b8ce',C3='#3ae0c8',C4='#1fa8bc';
+  if(shape==='kubus'||shape==='balok'){
+    var sx=shape==='balok'?1.35:1, sy=shape==='balok'?0.8:1;
+    function S(cx,cy){ return sqFlat(cx*sx,cy*sy,sx,sy); }
+    return [
+      {f:S(2,0),t:ISO_L,c:C4},{f:S(-1,0),t:ISO_R,c:C4},{f:S(0,1),t:ISO_R,c:C2},
+      {f:S(0,-1),t:ISO_TOP,c:C3},{f:S(0,0),t:ISO_L,c:C1},{f:S(1,0),t:ISO_R,c:C2}
+    ];
+  }
+  if(shape==='prisma'){
+    // Jaring silang: persegi panjang tengah, satu persegi panjang di atas & di bawahnya, segitiga di kiri & kanan.
+    // Terlipat: segitiga depan & belakang menutup kedua ujung, ketiga persegi panjang menjadi sisi tegak + alas.
+    var P1=[-0.95,0.70],P2=[0.55,0.70],P3=[-0.20,-0.60],D=[0.55,-0.35];
+    var B1=[P1[0]+D[0],P1[1]+D[1]],B2=[P2[0]+D[0],P2[1]+D[1]],B3=[P3[0]+D[0],P3[1]+D[1]];
+    return [
+      {f:triFlat(1,0,'l'),t:[B1,B2,B3],c:C4},
+      {f:sqFlat(1,0),t:[P1,P2,B2,B1],c:C1},
+      {f:sqFlat(1,1),t:[P1,B1,B3,P3],c:C2},
+      {f:sqFlat(1,-1),t:[P2,P3,B3,B2],c:C4},
+      {f:triFlat(1,0,'r'),t:[P1,P2,P3],c:C3}
+    ];
+  }
+  // limas
+  var apex=[0,-0.85], base=[[0,0.15],[1,0.65],[0,1.15],[-1,0.65]];
+  return [
+    {f:triFlat(0,0,'u'),t:[[-1,0.65],[0,0.15],apex],c:C4},
+    {f:triFlat(0,0,'l'),t:[[0,0.15],[1,0.65],apex],c:C4},
+    {f:sqFlat(0,0),t:base,c:C1},
+    {f:triFlat(0,0,'d'),t:[[-1,0.65],[0,1.15],apex],c:C2},
+    {f:triFlat(0,0,'r'),t:[[0,1.15],[1,0.65],apex],c:C3}
+  ];
+}
+function fbDraw(){
+  if(!fbCtx||!fbCanvas) return;
+  var w=fbCanvas.clientWidth||600, h=fbCanvas.clientHeight||500, dpr=Math.min(window.devicePixelRatio||1,2);
+  if(fbCanvas.width!==Math.round(w*dpr)){ fbCanvas.width=w*dpr; fbCanvas.height=h*dpr; }
+  var ctx=fbCtx; ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  // grid
+  ctx.strokeStyle='rgba(120,140,190,.18)'; ctx.lineWidth=1; ctx.beginPath();
+  for(var i=-14;i<=14;i++){ var a=flatPt(i,-10),b=flatPt(i,10); ctx.moveTo(w/2+a[0]*34, h/2+a[1]*34); ctx.lineTo(w/2+b[0]*34, h/2+b[1]*34);
+    var c=flatPt(-10,i),d=flatPt(10,i); ctx.moveTo(w/2+c[0]*34, h/2+c[1]*34); ctx.lineTo(w/2+d[0]*34, h/2+d[1]*34); }
+  ctx.stroke();
+  var U=Math.min(w,h)/6.4*fbScale, cx=w/2, cy=h/2-10, t=fbT, e=t*t*(3-2*t);
+  var cos=Math.cos(fbRot), sin=Math.sin(fbRot);
+  fbFaces(fbShape).forEach(function(face){
+    ctx.beginPath();
+    face.f.forEach(function(p,i){
+      var q=face.t[i]||face.t[face.t.length-1];
+      var lx=p[0]+(q[0]*1.15-p[0])*e, ly=p[1]+(q[1]-p[1])*e;
+      var rx=lx*cos-ly*sin*0.4, ry=lx*sin*0.4+ly;
+      var X=cx+rx*U, Y=cy+ry*U;
+      if(i===0)ctx.moveTo(X,Y); else ctx.lineTo(X,Y);
+    });
+    ctx.closePath(); ctx.fillStyle=face.c; ctx.globalAlpha=.96; ctx.fill(); ctx.globalAlpha=1;
+    ctx.strokeStyle='#0e7f8c'; ctx.lineWidth=1.6; ctx.stroke();
+  });
+}
+function initFallback(){
+  useFallback=true; var holder=$('#scene'); holder.innerHTML='';
+  fbCanvas=document.createElement('canvas'); fbCanvas.style.cssText='width:100%;height:100%;display:block;touch-action:none;cursor:grab';
+  fbCanvas.setAttribute('aria-label','Jaring-jaring yang dapat dilipat — geser penggeser untuk melipat');
+  holder.appendChild(fbCanvas); fbCtx=fbCanvas.getContext('2d');
+  var drag=false,lx=0;
+  fbCanvas.addEventListener('pointerdown',function(ev){drag=true;lx=ev.clientX;fbCanvas.setPointerCapture(ev.pointerId)});
+  fbCanvas.addEventListener('pointermove',function(ev){ if(!drag)return; fbRot=Math.max(-.5,Math.min(.5,fbRot+(ev.clientX-lx)*0.004)); lx=ev.clientX; fbDraw(); });
+  fbCanvas.addEventListener('pointerup',function(){drag=false});
+  fbCanvas.addEventListener('wheel',function(ev){ ev.preventDefault(); fbScale=Math.max(.7,Math.min(1.5,fbScale-ev.deltaY*0.001)); fbDraw(); },{passive:false});
+  fbDraw();
+}
+function buildShape(name){
+  currentShape=name;
+  if(useFallback){ fbShape=name; fbT=foldVal; fbDraw(); $('#shapeName').textContent=shapeInfo[name].name; $('#faceCount').textContent=shapeInfo[name].faces; return; }
+  if(!scene) return;
+  if(name==='kubus') buildKubus(); else if(name==='balok') buildBalok(); else if(name==='prisma') buildPrisma(); else buildLimas();
+  applyFold(foldVal);
+  $('#shapeName').textContent=shapeInfo[name].name; $('#faceCount').textContent=shapeInfo[name].faces;
+}
+function initThree(){
+  var holder=$('#scene');
+  if(typeof THREE==='undefined'){ initFallback(); return; }
+  try{
+    renderer=new THREE.WebGLRenderer({antialias:true,alpha:true});
+  }catch(e){ initFallback(); return; }
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2));
+  holder.appendChild(renderer.domElement);
+  scene=new THREE.Scene();
+  camera=new THREE.PerspectiveCamera(42,1,0.1,100);
+  var grid=new THREE.GridHelper(14,28,0xb9c6e8,0xd3dcf2); grid.position.y=-0.75; scene.add(grid);
+  scene.add(new THREE.AmbientLight(0xffffff,.75));
+  var d=new THREE.DirectionalLight(0xffffff,.85); d.position.set(4,7,3); scene.add(d);
+  var d2=new THREE.DirectionalLight(0xbfefff,.35); d2.position.set(-4,3,-3); scene.add(d2);
+  buildShape('kubus');
+  function loop(){ requestAnimationFrame(loop);
+    camera.position.set(Math.sin(az)*Math.sin(pol)*dist, Math.cos(pol)*dist*0.9+0.6, Math.cos(az)*Math.sin(pol)*dist);
+    camera.lookAt(0,0.3,0); renderer.render(scene,camera); }
+  loop(); onResize();
+  var el=renderer.domElement;
+  el.addEventListener('pointerdown',function(e){dragging=true;px=e.clientX;py=e.clientY;el.setPointerCapture(e.pointerId)});
+  el.addEventListener('pointermove',function(e){ if(!dragging)return; az-=(e.clientX-px)*0.008; pol=Math.max(.25,Math.min(1.35,pol-(e.clientY-py)*0.006)); px=e.clientX;py=e.clientY; });
+  el.addEventListener('pointerup',function(){dragging=false});
+  el.addEventListener('wheel',function(e){ e.preventDefault(); dist=Math.max(3.6,Math.min(10,dist+e.deltaY*0.005)); },{passive:false});
+}
+function onResize(){ if(useFallback){ fbDraw(); return; } if(!renderer)return; var h=$('#scene'); var w=h.clientWidth||600, hh=h.clientHeight||500; renderer.setSize(w,hh); camera.aspect=w/hh; camera.updateProjectionMatrix(); }
+window.addEventListener('resize',onResize);
+/* fold slider */
+var range=$('#foldRange');
+range.addEventListener('input',function(){ var v=+range.value; $('#foldPct').textContent=v+'%'; applyFold(v/100); });
+/* play animation */
+var animId=null;
+$('#btnPlay').addEventListener('click',function(){
+  if(animId){cancelAnimationFrame(animId);animId=null;this.textContent='▶ Putar animasi lipat';return;}
+  this.textContent='⏸ Jeda'; var start=performance.now(), from=+range.value;
+  var step=function(now){ var p=Math.min(1,(now-start)/2200); var v = from<100 ? from+(100-from)*p : 100-100*p;
+    if(p>=1 && from>=100){ v=0; }
+    range.value=Math.round(v); $('#foldPct').textContent=Math.round(v)+'%'; applyFold(v/100);
+    if(p<1){ animId=requestAnimationFrame(step);} else { animId=null; $('#btnPlay').textContent='▶ Putar animasi lipat'; if(from<100){range.value=100;$('#foldPct').textContent='100%';applyFold(1);} } };
+  animId=requestAnimationFrame(step);
+});
+/* shape chips */
+$$('#shapeChips .chip').forEach(function(c){ c.addEventListener('click',function(){
+  $$('#shapeChips .chip').forEach(function(x){x.classList.remove('on')}); c.classList.add('on');
+  range.value=0; $('#foldPct').textContent='0%'; foldVal=0; buildShape(c.getAttribute('data-shape'));
+});});
+$('#btnPaham').addEventListener('click',function(){
+  state.aDone=true; var fb=$('#aFb'); fb.className='feedback show good';
+  fb.innerHTML='✓ <b>Misi A selesai!</b> Kamu sudah melihat jaring melipat menjadi bangun ruang. Lanjut ke <b>Misi B</b> di tab atas.';
+  updateGate(); setTimeout(function(){ setMission('B'); },700);
+});
+/* ============================================================
+   MISI B — 11 JARING KUBUS
+   Each net: array of [col,row] squares (6 squares)
+============================================================ */
+var NETS=[
+ {cells:[[1,0],[0,1],[1,1],[2,1],[3,1],[1,2]],valid:true},
+ {cells:[[0,0],[0,1],[1,1],[2,1],[3,1],[1,2]],valid:true},
+ {cells:[[0,0],[1,0],[1,1],[2,1],[3,1],[1,2]],valid:true},
+ {cells:[[0,0],[2,0],[0,1],[1,1],[2,1],[1,2]],valid:true},
+ {cells:[[3,0],[0,1],[1,1],[2,1],[3,1],[1,2]],valid:true},
+ {cells:[[1,0],[1,1],[2,1],[3,1],[1,2],[3,2]],valid:true},
+ {cells:[[0,0],[0,1],[1,1],[1,2],[2,2],[3,2]],valid:true},
+ {cells:[[0,0],[1,0],[1,1],[2,1],[2,2],[3,2]],valid:true},
+ {cells:[[0,0],[0,1],[1,1],[2,1],[2,2],[2,3]],valid:true},
+ {cells:[[0,0],[1,0],[0,1],[1,1],[0,2],[1,2]],valid:true},
+ {cells:[[0,0],[1,0],[2,0],[0,1],[1,1],[2,1]],valid:true},
+ /* pengecoh */
+ {cells:[[0,0],[1,0],[2,0],[3,0],[4,0],[5,0]],valid:false,why:'Enam persegi segaris tidak bisa menutup kubus — tidak ada sisi atas/bawah yang tertutup.'},
+ {cells:[[0,0],[1,0],[0,1],[1,1],[2,1],[0,2]],valid:false,why:'Susunan ini membuat dua sisi tumpang tindih dan satu sisi kubus bolong.'},
+ {cells:[[1,0],[0,1],[1,1],[2,1],[1,2],[2,2]],valid:false,why:'Ada 4 persegi mengelilingi satu titik di tengah — pada kubus, satu titik sudut hanya ditempati 3 sisi.'},
+ {cells:[[0,0],[1,0],[2,0],[3,0],[1,1],[1,2]],valid:false,why:'Bentuk “tangga ganda” ini tumpang tindih saat dilipat dan menyisakan sisi yang terbuka.'}
+];
+function netSVG(net,scale){
+  var maxX=0,maxY=0; net.cells.forEach(function(c){maxX=Math.max(maxX,c[0]);maxY=Math.max(maxY,c[1])});
+  var u=scale||16, w=(maxX+1)*u+4, h=(maxY+1)*u+4;
+  var r=net.cells.map(function(c){return '<rect x="'+(2+c[0]*u)+'" y="'+(2+c[1]*u)+'" width="'+(u-2)+'" height="'+(u-2)+'" rx="2" fill="#2fd8dc" stroke="#0e7f8c" stroke-width="1"/>'}).join('');
+  return '<svg width="'+w+'" height="'+h+'" viewBox="0 0 '+w+' '+h+'" aria-hidden="true">'+r+'</svg>';
+}
+/* ----- Misi B: papan pembangun 4 x 4 (klik petak, rangkai 6 persegi, Cek jaring) ----- */
+var bSel={}, bFoundKeys={};
+function bSelCells(){ return Object.keys(bSel).map(function(k){ var p=k.split(','); return [+p[0],+p[1]]; }); }
+function bCanon(cells){
+  // kunci kanonis: sama untuk susunan yang hanya bergeser / berputar / tercermin
+  var tf=[[1,0,0,1],[1,0,0,-1],[-1,0,0,1],[-1,0,0,-1],[0,1,1,0],[0,1,-1,0],[0,-1,1,0],[0,-1,-1,0]];
+  var best=null;
+  tf.forEach(function(t){
+    var pts=cells.map(function(c){ return [c[0]*t[0]+c[1]*t[1], c[0]*t[2]+c[1]*t[3]]; });
+    var mx=Math.min.apply(null,pts.map(function(p){return p[0]})), my=Math.min.apply(null,pts.map(function(p){return p[1]}));
+    var key=pts.map(function(p){return (p[0]-mx)+','+(p[1]-my)}).sort().join('|');
+    if(best===null||key<best) best=key;
+  });
+  return best;
+}
+function bFoldCheck(cells){
+  // Simulasi lipatan: setiap petak diberi bingkai 3D (normal, atas, kanan).
+  // Sah bila semua petak terjangkau, tidak ada bingkai yang bertabrakan,
+  // dan keenam normal berbeda (keenam sisi kubus tertutup tepat satu kali).
+  var inSet={}; cells.forEach(function(c){ inSet[c[0]+','+c[1]]=true; });
+  function neg(v){ return v.map(function(a){return -a}); }
+  function key(v){ return v.join(','); }
+  var frames={}; var start=cells[0][0]+','+cells[0][1];
+  frames[start]={n:[0,0,1],u:[0,1,0],r:[1,0,0]};
+  var queue=[cells[0]];
+  while(queue.length){
+    var cur=queue.shift(); var f=frames[cur[0]+','+cur[1]];
+    var nbrs=[
+      {d:[1,0], fr:{n:f.r, u:f.u, r:neg(f.n)}},        // timur
+      {d:[-1,0], fr:{n:neg(f.r), u:f.u, r:f.n}},       // barat
+      {d:[0,-1], fr:{n:f.u, u:neg(f.n), r:f.r}},       // utara
+      {d:[0,1], fr:{n:neg(f.u), u:f.n, r:f.r}}         // selatan
+    ];
+    for(var i=0;i<nbrs.length;i++){
+      var nx=cur[0]+nbrs[i].d[0], ny=cur[1]+nbrs[i].d[1], nk=nx+','+ny;
+      if(!inSet[nk]) continue;
+      if(frames[nk]){
+        var a=frames[nk], b=nbrs[i].fr;
+        if(key(a.n)!==key(b.n)||key(a.u)!==key(b.u)||key(a.r)!==key(b.r)) return {valid:false,conflict:true};
+      } else { frames[nk]=nbrs[i].fr; queue.push([nx,ny]); }
+    }
+  }
+  if(Object.keys(frames).length<cells.length) return {valid:false,disconnected:true};
+  var normals={}; Object.keys(frames).forEach(function(k){ normals[key(frames[k].n)]=true; });
+  if(Object.keys(normals).length<cells.length) return {valid:false,overlap:true};
+  return {valid:true};
+}
+function bInvalidReason(cells,res){
+  if(res.disconnected) return 'Rangkaianmu belum tersambung semua — setiap persegi harus menempel pada sisi persegi lain, bukan hanya menyentuh di sudut.';
+  var set={}; cells.forEach(function(c){ set[c[0]+','+c[1]]=true; });
+  var i,j;
+  for(i=0;i<cells.length;i++){ var c=cells[i];
+    if(set[(c[0]+1)+','+c[1]]&&set[c[0]+','+(c[1]+1)]&&set[(c[0]+1)+','+(c[1]+1)])
+      return 'Ada 4 persegi membentuk blok 2 × 2. Pada kubus, satu titik sudut hanya ditempati 3 sisi, jadi blok seperti itu akan tumpang tindih saat dilipat. Geser satu perseginya.';
+  }
+  var maxRun=1;
+  cells.forEach(function(c){ var dirs=[[1,0],[0,1]];
+    dirs.forEach(function(d){ if(!set[(c[0]-d[0])+','+(c[1]-d[1])]){ var run=0,x=c[0],y=c[1]; while(set[x+','+y]){run++;x+=d[0];y+=d[1];} if(run>maxRun)maxRun=run; } });
+  });
+  if(maxRun>=5) return 'Ada '+maxRun+' persegi segaris. Mengelilingi kubus hanya membutuhkan 4 persegi segaris — selebihnya akan menumpuk pada sisi yang sama.';
+  return 'Saat dilipat, ada sisi yang tumpang tindih dan ada sisi kubus yang tertinggal bolong. Coba geser satu persegi lalu periksa lagi.';
+}
+function bFb(html,good){ var fb=$('#bFb'); fb.className='feedback show '+(good?'good':'no'); fb.innerHTML=html; }
+function renderB(){
+  var g=$('#bGrid'); g.innerHTML='';
+  for(var y=0;y<4;y++) for(var x=0;x<4;x++){
+    (function(x,y){
+      var b=document.createElement('button'); b.type='button'; b.className='bcell'+(bSel[x+','+y]?' sel':'');
+      b.setAttribute('aria-label','Petak kolom '+(x+1)+' baris '+(y+1)+(bSel[x+','+y]?' (terpilih)':''));
+      b.addEventListener('click',function(){
+        var k=x+','+y;
+        if(bSel[k]){ delete bSel[k]; }
+        else {
+          if(bSelCells().length>=6){ bFb('Sudah ada <b>6 persegi</b> terpilih — lepas satu petak dulu, atau tekan <b>Hapus</b> untuk mengulang dari awal.',false); return; }
+          bSel[k]=true;
+        }
+        $('#bFb').className='feedback';
+        renderB();
+      });
+      g.appendChild(b);
+    })(x,y);
+  }
+  $('#bSelInfo').textContent='Terpilih '+bSelCells().length+' dari 6 persegi — klik petak untuk memilih, klik lagi untuk melepas.';
+  $('#bPill').textContent=state.bFound+' / 11';
+}
+$('#btnClearNet').addEventListener('click',function(){ bSel={}; $('#bFb').className='feedback'; if(bFoldAnim){cancelAnimationFrame(bFoldAnim);bFoldAnim=null;} $('#bFoldPanel').classList.add('hidden'); bFoldCellsSave=null; bFoldOverlap=null; var leg=$('#bFoldLegend'); if(leg) leg.classList.add('hidden'); renderB(); });
+$('#btnCheckNet').addEventListener('click',function(){
+  var cells=bSelCells();
+  if(cells.length!==6){ bFb('Pilih tepat <b>6 persegi</b> dulu — sekarang baru '+cells.length+' yang terpilih.',false); return; }
+  var res=bFoldCheck(cells);
+  if(!res.valid){ bShowFold(cells,false); bFb('✗ <b>Belum menjadi jaring kubus.</b> '+bInvalidReason(cells,res)+' Lihat pada <b>tampilan 3D</b> di atas bagaimana lipatannya gagal menutup.',false); return; }
+  var ck=bCanon(cells);
+  if(bFoundKeys[ck]){ bShowFold(cells,true); bFb('Susunan ini <b>sudah kamu temukan</b> sebelumnya (berputar atau bergeser tetap dihitung jaring yang sama). Pada <b>tampilan 3D</b> di atas kamu bisa melihatnya tetap melipat menjadi kubus. Coba susunan yang berbeda!',false); return; }
+  bFoundKeys[ck]=true; state.bFound=Object.keys(bFoundKeys).length;
+  var gal=$('#bFoundGallery'); var item=document.createElement('div'); item.className='fitem';
+  item.innerHTML=netSVG({cells:cells},13)+'<small>Jaring '+state.bFound+'</small>'; gal.appendChild(item);
+  bSel={}; renderB(); updateGate(); bShowFold(cells,true);
+  if(state.bFound>=11){ bFb('🎉 <b>Luar biasa — semua 11 jaring kubus ditemukan!</b> Misi B tuntas sepenuhnya. Pada <b>tampilan 3D</b> di atas kamu bisa melihat jaring terakhirmu melipat menjadi kubus. Kamu bisa lanjut ke Simpulan lewat tombol di samping.',true); }
+  else if(state.bFound===5){ bFb('✓ <b>Benar, itu jaring kubus!</b> Lihat <b>tampilan 3D</b> di atas — jaringmu melipat dan menutup menjadi kubus! Sudah 5 jaring ditemukan — <b>Misi B terpenuhi</b> dan tahap berikutnya mulai terbuka. Mau menantang diri menemukan semua 11?',true); }
+  else { bFb('✓ <b>Benar, itu jaring kubus!</b> Lihat <b>tampilan 3D</b> di atas — jaringmu melipat dan menutup menjadi kubus! Sudah ditemukan <b>'+state.bFound+' dari 11</b>. Papan sudah dikosongkan — rangkai susunan berikutnya!',true); }
+});
+/* ============================================================
+   MISI B — TAMPILAN 3D SAAT CEK JARING
+   Perender 3D di kanvas (matematika lipatan engsel sungguhan,
+   tanpa bergantung pada CDN) supaya selalu tampil saat
+   "Cek jaring" ditekan — untuk jaring sah maupun belum sah.
+============================================================ */
+var bFoldCellsSave=null, bFoldTree=[], bFoldT=0, bFoldAz=0.75, bFoldTilt=0.62, bFoldScale=1, bFoldAnim=null, bFoldIsValid=false, bFoldOverlap=null;
+function bf3RotX(a){ var c=Math.cos(a),s=Math.sin(a); return [1,0,0, 0,c,-s, 0,s,c]; }
+function bf3RotY(a){ var c=Math.cos(a),s=Math.sin(a); return [c,0,s, 0,1,0, -s,0,c]; }
+function bf3RotZ(a){ var c=Math.cos(a),s=Math.sin(a); return [c,-s,0, s,c,0, 0,0,1]; }
+function bf3Mul(A,B){ var R=[0,0,0,0,0,0,0,0,0]; for(var i=0;i<3;i++) for(var j=0;j<3;j++){ var v=0; for(var k=0;k<3;k++) v+=A[i*3+k]*B[k*3+j]; R[i*3+j]=v; } return R; }
+function bf3Vec(M,v){ return [M[0]*v[0]+M[1]*v[1]+M[2]*v[2], M[3]*v[0]+M[4]*v[1]+M[5]*v[2], M[6]*v[0]+M[7]*v[1]+M[8]*v[2]]; }
+function bf3Add(a,b){ return [a[0]+b[0],a[1]+b[1],a[2]+b[2]]; }
+function bBuildFoldTree(cells){
+  var map={}; cells.forEach(function(c,i){ map[c[0]+','+c[1]]=i; });
+  var tree=[], seen={}, queue=[0]; seen[0]=true;
+  tree.push({cell:cells[0],parent:-1,dir:null,rootOff:[0,0,0]});
+  var idxOf={}; idxOf[0]=0;
+  while(true){
+    while(queue.length){
+      var ci=queue.shift(), cell=cells[ci], ti=idxOf[ci];
+      [[1,0],[-1,0],[0,1],[0,-1]].forEach(function(d){
+        var nk=(cell[0]+d[0])+','+(cell[1]+d[1]);
+        if(!(nk in map)) return; var ni=map[nk]; if(seen[ni]) return; seen[ni]=true;
+        var node={cell:cells[ni],parent:ti,dir:d,rootOff:null};
+        tree.push(node); idxOf[ni]=tree.length-1; queue.push(ni);
+      });
+    }
+    var nxt=-1; for(var i=0;i<cells.length;i++){ if(!seen[i]){ nxt=i; break; } }
+    if(nxt<0) break;
+    seen[nxt]=true; tree.push({cell:cells[nxt],parent:-1,dir:null,rootOff:[cells[nxt][0]-cells[0][0],0,cells[nxt][1]-cells[0][1]]}); idxOf[nxt]=tree.length-1; queue.push(nxt);
+  }
+  return tree;
+}
+function bComputeFoldFrames(t){
+  var ang=t*Math.PI/2, frames=[];
+  bFoldTree.forEach(function(node){
+    if(node.parent<0){ frames.push({R:[1,0,0,0,1,0,0,0,1],p:node.rootOff||[0,0,0]}); return; }
+    var pf=frames[node.parent], d=node.dir, Lh;
+    if(d[0]===1) Lh=bf3RotZ(ang); else if(d[0]===-1) Lh=bf3RotZ(-ang);
+    else if(d[1]===1) Lh=bf3RotX(-ang); else Lh=bf3RotX(ang);
+    var R=bf3Mul(pf.R,Lh);
+    var hingeW=bf3Add(pf.p, bf3Vec(pf.R,[d[0]*0.5,0,d[1]*0.5]));
+    var p=bf3Add(hingeW, bf3Vec(R,[d[0]*0.5,0,d[1]*0.5]));
+    frames.push({R:R,p:p});
+  });
+  return frames;
+}
+var BFOLD_COLS=[[47,216,220],[37,184,206],[58,224,200],[31,168,188],[53,201,221],[40,174,187]];
+var BFOLD_OVERLAP_COLS=[[239,68,68],[249,115,22],[220,38,38],[245,158,11],[185,28,28],[234,88,12]];
+function bComputeOverlap(){
+  // Kelompokkan sisi menurut posisi akhirnya (lipatan 100%): sisi-sisi yang
+  // berakhir di posisi yang sama persis adalah yang tumpang tindih.
+  var frames=bComputeFoldFrames(1), groups={}, order=[];
+  frames.forEach(function(f,i){
+    var key=f.p.map(function(v){ return Math.round(v*100)/100; }).join(',');
+    if(!groups[key]){ groups[key]={key:key,indices:[]}; order.push(groups[key]); }
+    groups[key].indices.push(i);
+  });
+  var byIndex={}, overlapGroups=[];
+  order.forEach(function(g){
+    if(g.indices.length>1){ overlapGroups.push(g); g.indices.forEach(function(idx,li){ byIndex[idx]={layer:li,groupSize:g.indices.length}; }); }
+  });
+  return {byIndex:byIndex,groups:overlapGroups};
+}
+function bfShade(rgb,f){ return 'rgb('+Math.min(255,Math.round(rgb[0]*f))+','+Math.min(255,Math.round(rgb[1]*f))+','+Math.min(255,Math.round(rgb[2]*f))+')'; }
+function bDrawFold(){
+  var cv=$('#bFoldCanvas'); if(!cv||!bFoldCellsSave) return;
+  var w=cv.clientWidth||600, h=cv.clientHeight||320, dpr=Math.min(window.devicePixelRatio||1,2);
+  if(cv.width!==Math.round(w*dpr)||cv.height!==Math.round(h*dpr)){ cv.width=w*dpr; cv.height=h*dpr; }
+  var ctx=cv.getContext('2d'); ctx.setTransform(dpr,0,0,dpr,0,0); ctx.clearRect(0,0,w,h);
+  var frames=bComputeFoldFrames(bFoldT);
+  var cen=[0,0,0]; frames.forEach(function(f){ cen=[cen[0]+f.p[0]/frames.length, cen[1]+f.p[1]/frames.length, cen[2]+f.p[2]/frames.length]; });
+  var viewR=bf3Mul(bf3RotX(bFoldTilt), bf3RotY(bFoldAz));
+  var light=[-0.45,1,0.35]; var ll=Math.sqrt(light[0]*light[0]+light[1]*light[1]+light[2]*light[2]); light=[light[0]/ll,light[1]/ll,light[2]/ll];
+  var U=Math.min(w,h)/4.4*bFoldScale, cx=w/2, cy=h/2;
+  var ovTraw=Math.max(0,Math.min(1,(bFoldT-0.45)/0.55)); var ovT=ovTraw*ovTraw*(3-2*ovTraw);
+  var faces=[];
+  frames.forEach(function(f,i){
+    var ov=bFoldOverlap?bFoldOverlap.byIndex[i]:null;
+    var n=bf3Vec(f.R,[0,1,0]);
+    // Sisi yang tumpang tindih digeser sedikit searah normalnya menjelang akhir
+    // lipatan, berlapis seperti tumpukan kertas, agar lapis bawah tidak hilang.
+    var off=ov?ov.layer*0.10*ovT:0;
+    var local=[[-0.5,0,-0.5],[0.5,0,-0.5],[0.5,0,0.5],[-0.5,0,0.5]];
+    var pts=[], depth=0;
+    local.forEach(function(lc){
+      var wp=bf3Add(f.p, bf3Vec(f.R,lc));
+      if(off) wp=bf3Add(wp,[n[0]*off,n[1]*off,n[2]*off]);
+      var rel=[wp[0]-cen[0],wp[1]-cen[1],wp[2]-cen[2]]; var vp=bf3Vec(viewR,rel);
+      pts.push([cx+vp[0]*U, cy-vp[1]*U]); depth+=vp[2]/4;
+    });
+    var dot=Math.max(0, n[0]*light[0]+n[1]*light[1]+n[2]*light[2]);
+    faces.push({pts:pts,depth:depth,shade:0.62+0.45*dot,
+      col:ov?BFOLD_OVERLAP_COLS[ov.layer%BFOLD_OVERLAP_COLS.length]:BFOLD_COLS[i%BFOLD_COLS.length],
+      alpha:ov?0.84:0.97, stroke:ov?'#991b1b':'#0e7f8c', lw:ov?2.8:1.8, ov:ov, idx:i});
+  });
+  faces.sort(function(a,b){ return a.depth-b.depth; });
+  faces.forEach(function(fc){
+    ctx.beginPath(); fc.pts.forEach(function(p,i){ if(i===0)ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]); });
+    ctx.closePath(); ctx.fillStyle=bfShade(fc.col,fc.shade); ctx.globalAlpha=fc.alpha; ctx.fill(); ctx.globalAlpha=1;
+    ctx.strokeStyle=fc.stroke; ctx.lineWidth=fc.lw; ctx.lineJoin='round'; ctx.stroke();
+  });
+  // Penanda lokasi tumpang tindih: muncul saat lipatan hampir selesai.
+  if(bFoldOverlap && bFoldOverlap.groups.length && bFoldT>0.68){
+    // titik layar rata-rata dari semua sisi yang tumpang tindih (dari gambar terakhir)
+    var sx=0,sy=0,cnt=0;
+    faces.forEach(function(fc){ if(fc.ov){ fc.pts.forEach(function(p){ sx+=p[0]; sy+=p[1]; cnt++; }); } });
+    if(cnt){
+      var ax=sx/cnt, ay=sy/cnt;
+      var label='⚠ Tumpang tindih di sini';
+      ctx.font='800 12.5px "Plus Jakarta Sans",system-ui,sans-serif';
+      var tw=ctx.measureText(label).width, pad=9, bw=tw+pad*2, bh=24;
+      var bx=Math.max(8,Math.min(w-bw-8,ax-bw/2)), by=Math.max(8,ay-U*0.95-bh);
+      ctx.strokeStyle='#991b1b'; ctx.lineWidth=1.6; ctx.beginPath(); ctx.moveTo(ax,ay-6); ctx.lineTo(ax,by+bh+2); ctx.stroke();
+      ctx.beginPath(); ctx.arc(ax,ay,4.5,0,Math.PI*2); ctx.fillStyle='#dc2626'; ctx.fill(); ctx.strokeStyle='#fff'; ctx.lineWidth=1.6; ctx.stroke();
+      ctx.beginPath();
+      if(ctx.roundRect){ ctx.roundRect(bx,by,bw,bh,8); } else { ctx.rect(bx,by,bw,bh); }
+      ctx.fillStyle='#dc2626'; ctx.fill();
+      ctx.fillStyle='#fff'; ctx.textBaseline='middle'; ctx.fillText(label,bx+pad,by+bh/2+0.5); ctx.textBaseline='alphabetic';
+    }
+  }
+}
+function bFoldStatusUpdate(){
+  var st=$('#bFoldStatus'); if(!st) return;
+  st.classList.remove('ok','bad');
+  var hasOv=!!(bFoldOverlap && bFoldOverlap.groups.length);
+  if(bFoldT>=0.999){
+    if(bFoldIsValid){ st.textContent='✓ Tertutup menjadi kubus!'; st.classList.add('ok'); }
+    else if(hasOv){ st.textContent='✗ Tidak menutup — sisi merah & oranye tumpang tindih'; st.classList.add('bad'); }
+    else { st.textContent='✗ Tidak menutup — ada sisi yang bolong'; st.classList.add('bad'); }
+  } else if(hasOv){ st.textContent='Melipat… '+Math.round(bFoldT*100)+'% — perhatikan sisi merah & oranye'; }
+  else { st.textContent='Melipat… '+Math.round(bFoldT*100)+'%'; }
+}
+function bPlayFold(){
+  if(bFoldAnim){ cancelAnimationFrame(bFoldAnim); bFoldAnim=null; }
+  var start=performance.now(), dur=1900;
+  var step=function(now){
+    var p=Math.min(1,(now-start)/dur); var e=p<0.5 ? 2*p*p : 1-Math.pow(-2*p+2,2)/2;
+    bFoldT=e; var rg=$('#bFoldRange'); if(rg) rg.value=Math.round(e*100);
+    $('#bFoldPct').textContent='Terlipat '+Math.round(e*100)+'%';
+    bFoldStatusUpdate(); bDrawFold();
+    if(p<1){ bFoldAnim=requestAnimationFrame(step); } else { bFoldAnim=null; bFoldT=1; bFoldStatusUpdate(); bDrawFold(); }
+  };
+  bFoldAnim=requestAnimationFrame(step);
+}
+function bShowFold(cells,valid){
+  bFoldCellsSave=cells.map(function(c){ return [c[0],c[1]]; });
+  bFoldTree=bBuildFoldTree(bFoldCellsSave); bFoldIsValid=!!valid; bFoldT=0;
+  bFoldOverlap=bComputeOverlap();
+  var leg=$('#bFoldLegend'); if(leg) leg.classList.toggle('hidden',!(bFoldOverlap && bFoldOverlap.groups.length));
+  var panel=$('#bFoldPanel'); panel.classList.remove('hidden');
+  var rg=$('#bFoldRange'); if(rg) rg.value=0; $('#bFoldPct').textContent='Terlipat 0%';
+  bFoldStatusUpdate(); bDrawFold();
+  setTimeout(function(){ panel.scrollIntoView({behavior:'smooth',block:'nearest'}); bDrawFold(); bPlayFold(); },60);
+}
+(function(){
+  var cv=$('#bFoldCanvas'); if(!cv) return;
+  var drag=false,lx=0,ly=0;
+  cv.addEventListener('pointerdown',function(ev){ drag=true; lx=ev.clientX; ly=ev.clientY; try{cv.setPointerCapture(ev.pointerId);}catch(e){} });
+  cv.addEventListener('pointermove',function(ev){ if(!drag) return; bFoldAz+=(ev.clientX-lx)*0.01; bFoldTilt=Math.max(0.15,Math.min(1.25,bFoldTilt+(ev.clientY-ly)*0.008)); lx=ev.clientX; ly=ev.clientY; bDrawFold(); });
+  cv.addEventListener('pointerup',function(){ drag=false; });
+  cv.addEventListener('pointercancel',function(){ drag=false; });
+  cv.addEventListener('wheel',function(ev){ ev.preventDefault(); bFoldScale=Math.max(0.7,Math.min(1.5,bFoldScale-ev.deltaY*0.001)); bDrawFold(); },{passive:false});
+  var rg=$('#bFoldRange');
+  if(rg) rg.addEventListener('input',function(){ if(bFoldAnim){cancelAnimationFrame(bFoldAnim);bFoldAnim=null;} bFoldT=+rg.value/100; $('#bFoldPct').textContent='Terlipat '+rg.value+'%'; bFoldStatusUpdate(); bDrawFold(); });
+  var rp=$('#btnFoldReplay'); if(rp) rp.addEventListener('click',function(){ bFoldT=0; bPlayFold(); });
+  window.addEventListener('resize',function(){ if(bFoldCellsSave && !$('#bFoldPanel').classList.contains('hidden')) bDrawFold(); });
+})();
+/* ---------- SIMPULKAN ---------- */
+$$('.concl').forEach(function(b){ b.addEventListener('click',function(){ b.classList.toggle('sel'); }); });
+$('#btnCheckConcl').addEventListener('click',function(){
+  var allRight=true;
+  $$('.concl').forEach(function(b){ var right=b.getAttribute('data-right')==='1'; var sel=b.classList.contains('sel');
+    b.classList.remove('right','wrong'); if(sel&&right)b.classList.add('right'); if(sel&&!right){b.classList.add('wrong');allRight=false;} if(!sel&&right)allRight=false; });
+  var fb=$('#conclFb'); fb.className='feedback show '+(allRight?'good':'no');
+  fb.innerHTML= allRight ? '✓ <b>Simpulanmu tepat semua!</b> Ingat: limas segiempat alasnya persegi (bukan segitiga), dan tidak semua rangkaian 6 persegi menjadi kubus.' : 'Masih ada yang belum tepat — yang berwarna hijau adalah pilihan benar, merah berarti seharusnya tidak dipilih. Perhatikan: alas limas segiempat adalah persegi.';
+  if(allRight){ unlocked34=true; $('#btnToStage4').classList.remove('hidden'); }
+});
+$('#btnToStage4').addEventListener('click',function(){ goStage(4); });
+/* ---------- LATIHAN ---------- */
+var LAT=[
+ {soal:'Sebuah rangkaian terdiri atas 6 persegi. Pada rangkaian itu ada 4 persegi yang mengelilingi satu titik yang sama. Apakah rangkaian itu jaring-jaring kubus?',
+  opts:['Ya, karena jumlah perseginya 6','Tidak, karena pada kubus satu titik sudut hanya ditempati 3 sisi'],ans:1,
+  bahas:'<b class="lab">Soal:</b> Rangkaian 6 persegi dengan 4 persegi mengelilingi satu titik — jaring kubus atau bukan?<br><b class="lab">Diketahui:</b> Rangkaian terdiri atas 6 persegi dan ada 4 persegi bertemu pada satu titik.<br><b class="lab">Ditanyakan:</b> Apakah rangkaian tersebut merupakan jaring-jaring kubus?<br><b class="lab">Penyelesaian:</b> Pada kubus, setiap titik sudut merupakan pertemuan tepat 3 sisi. Jika 4 persegi bertemu pada satu titik, saat dilipat sisi-sisi itu akan tumpang tindih dan ada sisi kubus yang kosong, sehingga lipatan tidak tertutup.<br><b class="lab">Jadi,</b> rangkaian tersebut bukan jaring-jaring kubus.'},
+ {soal:'Sebuah jaring-jaring terdiri atas 1 persegi dan 4 segitiga yang masing-masing menempel pada setiap sisi persegi itu. Bangun ruang apa yang terbentuk?',
+  opts:['Prisma segitiga','Limas segiempat','Balok'],ans:1,
+  bahas:'<b class="lab">Soal:</b> Jaring-jaring berisi 1 persegi dan 4 segitiga pada setiap sisinya. Bangun apa yang terbentuk?<br><b class="lab">Diketahui:</b> Alas berbentuk persegi, dan ada 4 sisi segitiga.<br><b class="lab">Ditanyakan:</b> Nama bangun ruang yang terbentuk.<br><b class="lab">Penyelesaian:</b> Saat dilipat, keempat segitiga tegak dan ujung-ujungnya bertemu pada satu titik puncak di atas alas persegi. Bangun dengan alas persegi dan sisi tegak segitiga yang bertemu di satu titik puncak adalah limas segiempat.<br><b class="lab">Jadi,</b> bangun yang terbentuk adalah limas segiempat.'},
+ {soal:'Dina punya kertas berbentuk jaring kubus. Ia mewarnai satu sisi, lalu melipatnya. Sisi yang berhadapan dengan sisi berwarna adalah sisi yang pada jaring-jaring …',
+  opts:['bersebelahan langsung dengan sisi berwarna','terpisah satu sisi dari sisi berwarna','menempel di sudut yang sama'],ans:1,
+  bahas:'<b class="lab">Soal:</b> Pada jaring-jaring kubus, sisi manakah yang berhadapan dengan sisi yang diwarnai Dina?<br><b class="lab">Diketahui:</b> Sisi yang diwarnai berada pada jaring-jaring kubus yang kemudian dilipat.<br><b class="lab">Ditanyakan:</b> Letak sisi yang berhadapan dengan sisi berwarna pada jaring-jaring.<br><b class="lab">Penyelesaian:</b> Sisi yang bersebelahan langsung pada jaring-jaring akan menjadi sisi yang bertetangga (bertemu pada rusuk) setelah dilipat, bukan berhadapan. Sisi yang berhadapan selalu terpisah tepat satu sisi di antaranya pada rangkaian jaring-jaring.<br><b class="lab">Jadi,</b> sisi yang berhadapan adalah sisi yang terpisah satu sisi dari sisi berwarna.'}
+];
+var latBox=$('#latihanList');
+LAT.forEach(function(item,idx){
+  var card=document.createElement('div'); card.className='qcard';
+  card.innerHTML='<h3>Soal '+(idx+1)+'</h3><p>'+item.soal+'</p>';
+  var opts=document.createElement('div'); opts.className='opts';
+  item.opts.forEach(function(o,i){ var b=document.createElement('button'); b.className='opt'; b.textContent=o;
+    b.addEventListener('click',function(){ if(state.latihanAnswered[idx])return; state.latihanAnswered[idx]=true;
+      Array.prototype.forEach.call(opts.children,function(x,j){ if(j===item.ans)x.classList.add('right'); });
+      if(i===item.ans){ b.classList.add('right'); state.latihanScore++; } else b.classList.add('wrong');
+      $('#latScore').textContent='Skor latihan: '+state.latihanScore+' dari '+Object.keys(state.latihanAnswered).length+' terjawab';
+      unlocked5=true;
+    }); opts.appendChild(b); });
+  card.appendChild(opts);
+  var pb=document.createElement('div'); pb.className='pembahasan'; pb.innerHTML=item.bahas;
+  var tb=document.createElement('button'); tb.className='btn'; tb.style.marginTop='12px'; tb.textContent='Lihat Pembahasan';
+  tb.addEventListener('click',function(){ pb.classList.toggle('show'); tb.textContent=pb.classList.contains('show')?'Sembunyikan Pembahasan':'Lihat Pembahasan'; });
+  card.appendChild(tb); card.appendChild(pb); latBox.appendChild(card);
+});
+$('#btnToStage5').addEventListener('click',function(){ unlocked5=true; goStage(5); });
+/* ---------- REFLEKSI ---------- */
+$$('#moodRow button').forEach(function(b){ b.addEventListener('click',function(){ $$('#moodRow button').forEach(function(x){x.classList.remove('sel')}); b.classList.add('sel'); }); });
+$('#btnFinish').addEventListener('click',function(){
+  var mood=$('#moodRow button.sel'); var fb=$('#finishFb'); fb.className='feedback show good';
+  fb.innerHTML='🎉 <b>Kerja bagus!</b> Kamu sudah memprediksi, bereksperimen melipat jaring-jaring 3D, menemukan jaring kubus, menyimpulkan, dan berlatih.'+(mood?' Perasaanmu hari ini: <b>'+mood.getAttribute('data-m')+'</b>.':'')+' Sampai jumpa di lab berikutnya!';
+});
+/* ---------- INIT ---------- */
+renderB(); updateGate(); initThree();
+})();
+</script>
+</body>
+</html>
